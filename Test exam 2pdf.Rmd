@@ -1,0 +1,124 @@
+---
+title: "Exam 2 PDF"
+author: "RLong"
+date: "6/26/2020"
+output: word_document
+
+---
+
+
+clear the environment
+```{r}
+rm(list=ls(all=TRUE))
+```
+
+new project, select working directory
+
+load the inequality dataset and save the data frame
+```{r}
+library(rio)
+inequality_data = import("inequality.xlsx")
+```
+#this is a cross sectional dataset because it is analyzes data from one year, 2015.
+```{r}
+head(inequality_data)
+summary(inequality_data) #see the year column in the console
+```
+#subset command to provide the gini scores for denmark and sweden
+
+subset(inequality_data$inequality_gini, "Denmark")
+subset(inequality_data$inequality_gini, "Sweden")
+
+#6 it is better to have low inequality_gini scores, as seen with Denmark and Sweden.
+
+#Taking a quick peak at the data frame
+```{r}
+head(inequality_data)
+```
+#writing a function called accent.remove to remove the accent on Belarus
+```{r}
+inequality_data$country[inequality_data$country=="Belarús"] = "Belarus"
+```
+#head command again to show that I removed the accent.
+```{r}
+head(inequality_data)
+```
+#sort the data by lowest inequality_gini scores
+```{r}
+inequality_data = inequality_data[order(inequality_data$inequality_gini),]
+```
+#mean of the inequality_gini score
+```{r}
+mean(inequality_data$inequality_gini, na.rm =TRUE)
+```
+#creating dummy variables 
+```{r}
+low_inequality <- ifelse(inequality_data$inequality_gini < 36.81, 1, 0)
+high_inequality <- ifelse(inequality_data$inequality_gini > 36.81, 1, 0)
+```
+#run a cross tab using the dummy variables
+```{r}
+library(doBy)
+summaryBy(low_inequality ~ high_inequality, data=inequality_data,  
+          FUN = c(mean, length))
+```
+#write a for loop that prints three actors
+```{r}
+people_reduce <- c('The World Bank', 'African Development Bank', 'Bill and Melinda Gates Foundation')
+for ( i in people_reduce){
+  print(i)
+}  
+```
+#the variable that is correlated with inequality is poverty. Multidimensional poverty headcount. I picked it because it has the Gini index and says Poverty and equity data
+
+#import the variable into R
+```{r}
+library(WDI)
+multi_poverty=WDI(country = "all",
+                  indicator = c("SI.POV.MDIM"), # indicator from web
+                  start = 2015, end = 2015, extra = FALSE, cache = NULL)
+```
+#merge the new variable into other dataset
+```{r}
+library(tidyverse)
+merged_df = left_join(x=inequality_data,
+                        y=multi_poverty,
+                        by=c("country", "year"))
+```
+#remove the missing data on the basis of inequality_gini
+```{r}
+merged_df<- na.omit(merged_df, select=c("inequality_gini", "multi_poverty"))
+```
+#keeping the data with inequality_gini scores greater than 30
+```{r}
+library(dplyr)
+data_greater_30 <- 
+  merged_df %>%
+  dplyr::filter(!(merged_df$inequality_gini< 30))
+```
+#count how many countries have the sequence "ai" in their name
+```{r}
+grep("ai", data_greater_30)
+```
+#apply family to take the sum of inequality_gini
+```{r}
+data_greater_30 <- sapply(data_greater_30$inequality_gini, sum)
+```
+#label your variables
+```{r}
+library(labelled)
+var_label(merged_df) <- list(`country` = "Country",
+                               `year` = "year",
+                               `inequality_gini` = "Gini Index for Inequality",
+                               `SI.POV.MDIM` = "MultiDimensional Poverty Measure")
+```
+#save the labelled data frame as a Stata
+```{r}
+library(rio)
+```
+export(merged_df, file = "final_data.dta")
+
+[link to the git hub repo](https://github.com/RolongAlong/exam2.git)
+
+ssh key
+git@github.com:RolongAlong/exam2.git
